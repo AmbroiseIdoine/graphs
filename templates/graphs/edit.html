@@ -1,0 +1,181 @@
+{% load static %}
+{% load define_action %}
+
+<html>
+<head>
+
+</head>
+
+<link rel="stylesheet" type="text/css" href="{% static 'graphs/style.css' %}"/>
+<script src="{%static 'graphs/js/jquery-3.3.1.slim.min.js' %}"></script>
+<script src="{%static 'graphs/js/client.js' %}"></script>
+
+<body>
+{% with diagram=diagram.get_diagram_norescale %}
+
+<!-- creates a causality diagram
+It should get a DiagramObj named "diagram" to this end
+-->
+
+<div id="diagram_{{diagram.name}}" class="diagram_div"
+    style="width :{{diagram.width}}px; height:{{diagram.height}}px">
+      
+    <!-- puts icon image in background -->
+    <div class="diagram_overlay" style="width :{{diagram.width}}px;
+                        height:{{diagram.height}}px">
+        {% for icon  in diagram.icons %}
+        <div class="diagram_icon" id="diagram_icon_{{icon.node_id}}" 
+            style="position: absolute;
+            left: {{icon.pos.0|subtract2:icon.size}}; 
+            top: {{icon.pos.1|subtract2:icon.size}};">
+            <img id="image_{{icon.node_id}}"
+                src="{{icon.picture.picture.url}}" 
+                alt="{{icon.title}}"
+                style= "width: {{icon.size|times2}};
+                        height: {{icon.size|times2}};">
+        </div>
+        {%endfor%}
+
+    {% for icon  in diagram.icons %}
+        <canvas class="circle" id="circle_{{icon.node_id}}" 
+        width={{icon.size|times:2|add:10}} height={{icon.size|times:2|add:10}}
+        style="left: {{icon.pos.0|subtract:icon.size|subtract:5}}; 
+        top: {{icon.pos.1|subtract:icon.size|subtract:5}}">
+        </canvas>
+    {%endfor%}
+
+    </div>
+    
+    <!-- Draw circles and arrows -->
+    
+    <canvas class="diagram_canvas" id="diagram_canvas_{{diagram.name}}" 
+            width="{{diagram.width}}px" height="{{diagram.height}}px">
+    </canvas>
+    
+
+    
+    <!-- Clickable message that appears on mouseenter -->
+    <div class="cause_overlay" 
+         style="width :{{diagram.width}}px; height:{{diagram.height}}px">
+    
+    {% for icon  in diagram.icons %}
+    <div class="diagram_text_link" 
+        onmousedown="show_node({{icon.node_id}})"
+        ondrag="test({{icon.node_id}})">
+        <div class="diagram_icon" id="canvas_{{icon.node_id}}"
+            style="position: absolute;
+            left: {{icon.pos.0|subtract2:icon.size}}; 
+            top: {{icon.pos.1|subtract2:icon.size}};
+            width: {{icon.size|add:icon.size}}px;
+            height: {{icon.size|add:icon.size}}px;">
+        </div>
+    </div>
+    {% endfor %}
+    </div>
+</div>
+
+    
+<div id="balloon_{{diagram.name}}" class="diagram_div"
+    style="width :{{diagram.width}}px; height:{{diagram.height}}px">
+      
+    <!-- puts icon image in background -->
+    <div class="diagram_overlay" style="width :{{diagram.width}}px;
+                        height:{{diagram.height}}px">
+                        
+    {% for icon  in diagram.icons %}
+    {% with text_size=diagram.text_size %}
+    <div id="text_{{icon.node_id}}" class="diagram_text_edit"
+        style="border-radius:{{text_size}}px;
+        left: 10px; 
+        top: 10px;
+        width: {{text_size|add:text_size|times:diagram.oldfactor}}px;
+        height: {{text_size|add:text_size|times:diagram.oldfactor}}px;
+        display: none;">
+        <div style="margin:{{text_size|times:0.2}}">
+            <h4>
+            {{icon.title}}
+            </h4>
+            <p>
+            {{icon.text}}
+            </p>
+        </div>
+     </div>	
+     {%endwith%}
+    {% endfor %}
+    </div>
+</div>
+
+
+{% if edit %}
+<div class="editing_box">
+    <h4>Editing mode</h4>
+    <p>
+    <a href="/logout/">logout</a>
+    <a href="/home/">home</a>
+    </p>
+
+    <form action="{% url 'update' diagram.name %}" method="post">
+    {% csrf_token %}
+    {% for node in diagram.icons %}
+    
+    <div id="edit_node_{{node.node_id}}" class="edit_node" style="display: none;">
+        <h4> {{node.title}} </h4>
+        <label for="sd_{{node.node_id}}">short_description</label>
+        <input size="100" name="short_description_{{node.node_id}}" id="sd_{{node.node_id}}" 
+            value="" type="text">
+        
+        <label for="rad_{{node.node_id}}">radius</label>
+        <input name="radius_{{node.node_id}}" id="rad_{{node.node_id}}" value={{node.size}} 
+            onchange="resize({{node.node_id}})" type="number">
+        
+        <label for="X_{{node.node_id}}">X-coordinate</label>
+        <input name="X_{{node.node_id}}" id="X_{{node.node_id}}" value={{node.pos.0|subtract:diagram.offset.0}}  
+            onchange="translate({{node.node_id}},{{diagram.offset.0}},{{diagram.offset.1}})" type="number">
+        
+        <label for="Y_{{node.node_id}}">Y-coordinate</label>
+        <input name="Y_{{node.node_id}}" id="Y_{{node.node_id}}" value={{node.pos.1|subtract:diagram.offset.1}} 
+            onchange="translate({{node.node_id}},{{diagram.offset.0}},{{diagram.offset.1}})" type="number">
+    </div>
+    {% endfor %}
+    
+    <input value="Save Changes" type="submit">
+</form>
+
+<div class="editing_box">
+<div style="display: none;">
+<input type="number" id="oldx">
+<input type="number" id="oldy">
+</div>
+{% endif %}
+
+
+
+<script>
+
+var canvas = document.getElementById("diagram_canvas_{{diagram.name}}");
+var ctx = canvas.getContext("2d");
+
+ctx.lineWidth={{diagram.line_width}};
+
+{% for line in diagram.lines %}
+ctx.beginPath();
+ctx.strokeStyle="{{line.color}}";
+ctx.moveTo( {{line.pos.0}} , {{line.pos.1}} );
+ctx.lineTo( {{line.pos.2}} , {{line.pos.3}} );
+ctx.stroke();
+{% endfor %}
+
+{% for icon  in diagram.icons %}
+var canvas = document.getElementById("circle_{{icon.node_id}}");
+ctx = canvas.getContext("2d");
+ctx.lineWidth={{diagram.line_width}};
+ctx.beginPath();
+ctx.strokeStyle="{{icon.color}}";
+ctx.arc( {{icon.size}}+5, {{icon.size}}+5,{{icon.size}},0,2*Math.PI);
+ctx.stroke();
+{% endfor %}
+
+</script>
+
+{% endwith %}
+</body>

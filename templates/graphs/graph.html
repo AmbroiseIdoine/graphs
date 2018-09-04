@@ -1,0 +1,118 @@
+{% load static %}
+{% load define_action %}
+
+<html>
+<head>
+
+</head>
+
+<link rel="stylesheet" type="text/css" href="{% static 'graphs/style.css' %}"/>
+<script src="{%static 'graphs/js/jquery-3.3.1.slim.min.js' %}"></script>
+<script src="{%static 'graphs/js/client.js' %}"></script>
+
+<body>
+{% with diagram=diagram.get_diagram %}
+
+<!-- creates a causality diagram
+It should get a DiagramObj named "diagram" to this end
+-->
+
+<div id="diagram_{{diagram.name}}" class="diagram_div"
+    style="width :{{diagram.width}}px; height:{{diagram.height}}px">
+      
+    <!-- puts icon image in background -->
+    <div class="diagram_overlay" style="width :{{diagram.width}}px;
+                        height:{{diagram.height}}px">
+        {% for icon  in diagram.icons %}
+        <div class="diagram_icon"
+            style="position: absolute;
+            left: {{icon.pos.0|subtract2:icon.size}}; 
+            top: {{icon.pos.1|subtract2:icon.size}};">
+            <img src="{{icon.picture.picture.url}}" 
+                alt="{{icon.title}}"
+                style= "width: {{icon.size|times2}};
+                        height: {{icon.size|times2}};">
+        </div>
+        {%endfor%}
+    </div>
+    
+    <!-- Draw circles and arrows -->
+    <canvas class="diagram_canvas" id="diagram_canvas_{{diagram.name}}" 
+            width="{{diagram.width}}px" height="{{diagram.height}}px">
+    </canvas>
+    
+    <!-- Clickable message that appears on mouseenter -->
+    <div class="cause_overlay" 
+         style="width :{{diagram.width}}px; height:{{diagram.height}}px">
+    
+    {% for icon  in diagram.icons %}
+    <a class="diagram_text_link" 
+        href="{{icon.url}}">
+        <div class="diagram_icon"
+            style="position: absolute;
+            left: {{icon.pos.0|subtract2:icon.size}}; 
+            top: {{icon.pos.1|subtract2:icon.size}};
+            width: {{icon.size|add:icon.size}}px;
+            height: {{icon.size|add:icon.size}}px;"
+            onmouseenter="show_text('text_{{diagram.name}}_{{forloop.counter}}');">
+        </div>
+    </a>
+    {% with text_size=diagram.text_size %}
+    <a class="diagram_text_link" 
+        href="{{icon.url}}">
+        <div id="text_{{diagram.name}}_{{forloop.counter}}" class="diagram_text"
+            style="border-radius:{{text_size}}px;
+            left: {{icon.pos.0|subtract:text_size }}px; 
+            top: {{icon.pos.1|subtract:text_size}}px;
+            width: {{text_size|add:text_size}}px;
+            height: {{text_size|add:text_size}}px;"
+            onmouseleave="hide_text('text_{{diagram.name}}_{{forloop.counter}}');">
+            <div style="margin:{{text_size|times:0.2}}">
+                <h4>
+                {{icon.title}}
+                </h4>
+                <p>
+                {{icon.text}}
+                </p>
+            </div>
+         </div>
+     </a>	
+     {%endwith%}
+    {% endfor %}
+    </div>
+</div>
+
+
+{% if edit %}
+<div class="editing_box">
+    <h4>Editing mode</h4>
+    <p><a href="{% url 'logout' %}">logout</a></p>
+</div>
+{% endif %}
+
+<script>
+
+var canvas = document.getElementById("diagram_canvas_{{diagram.name}}");
+var ctx = canvas.getContext("2d");
+
+ctx.lineWidth={{diagram.line_width}};
+
+{% for line in diagram.lines %}
+ctx.beginPath();
+ctx.strokeStyle="{{line.color}}";
+ctx.moveTo( {{line.pos.0}} , {{line.pos.1}} );
+ctx.lineTo( {{line.pos.2}} , {{line.pos.3}} );
+ctx.stroke();
+{% endfor %}
+
+{% for icon  in diagram.icons %}
+ctx.beginPath();
+ctx.strokeStyle="{{icon.color}}";
+ctx.arc( {{ icon.pos.0 }},{{ icon.pos.1 }}, {{icon.size}},0,2*Math.PI);
+ctx.stroke();
+{% endfor %}
+
+</script>
+
+{% endwith %}
+</body>

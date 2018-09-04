@@ -1,0 +1,10 @@
+
+<h1> {{message}} </h1>
+<form action="{% url 'auth' pk %}" method="post">
+{% csrf_token %}
+<label for="username">Pseudo</label>
+<input type="text" name="username"><br>
+<label for="password">Mot de passe</label>
+<input type="password" name="password"><br>
+<input type="submit" value="Submit">
+</form>

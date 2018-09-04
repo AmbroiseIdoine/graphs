@@ -1,0 +1,29 @@
+{% load static %}
+
+<html>
+<head>
+
+</head>
+
+<link rel="stylesheet" type="text/css" href="{% static 'graphs/style.css' %}"/>
+
+<body>
+
+<h2> Diagrams: </h2>
+
+<ul>
+{% for diag in object_list %}
+    <li><a href="{% url 'graph' diag.id %}">{{diag.name}}</li>
+{% endfor %}
+</ul>
+
+<h2> Edit: </h2>
+{{object}}
+<ul>
+{% for diag in object_list %}
+    <li><a href="{% url 'auth' diag.id %}">{{diag.name}}</li>
+{% endfor %}
+</ul>
+
+
+</body>
